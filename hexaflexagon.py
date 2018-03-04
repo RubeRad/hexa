@@ -34,9 +34,30 @@ def copyTriangle(img, # openCV image
     R = cv2.getRotationMatrix2D(crot, arot, 1)
     rot = cv2.warpAffine(img, R, (side*4, side*4))
     cv2.imwrite('rot.png', rot)
+    minr = int(crot[1]-   h/2);  maxr = int(minr+h)
+    minc = int(crot[0]-side/2);  maxc = minc + side
+    crop = cv2.cvtColor(rot[minr:maxr, minc:maxc], cv2.COLOR_BGR2BGRA)
+    cv2.imwrite('crop.png', crop)
+    hh = crop.shape[0]
+    if   ctr == 'bot':
+        tril = np.array([[0,0], [side//2,hh], [0, hh]])
+        trir = np.array([[side,0], [side,hh], [side//2, hh]])
+    else:
+        tril = np.array([[0,0], [side//2,0], [0, hh]])
+        trir = np.array([[side,0], [side,hh], [side//2, 0]])
+    cv2.fillConvexPoly(crop, tril, (0,0,0,0))
+    cv2.fillConvexPoly(crop, trir, (0,0,0,0))
 
+    cv2.imwrite('crop.png', crop)
 
-    print(crot)
+    minr = h if row else 0;  maxr = minr+crop.shape[0]
+    minc = index * side//2;  maxc = minc+crop.shape[1]
+    roi = outimg[minr:maxr, minc:maxc]
+    cnd = crop[:, :, 3] > 0
+    roi[cnd] = crop[cnd]
+    cv2.imwrite('out.png', outimg)
+
+    stophere=1
 
 image=[]
 for i in range(len(sys.argv)):
@@ -55,8 +76,8 @@ for line in lines:
 half = len(tri)//2
 h  = math.sqrt(side*side - side*side/4)
 nr = int(math.ceil(2*h))
-nc = int((half-1) * (side/2))
-outimg = cv2.resize(image[0], (nc, nr))
+nc = int((half+1) * (side/2))
+outimg = np.zeros((nr, nc, 4))
 cv2.imwrite('out.png', outimg)
 
 
