@@ -7,24 +7,53 @@ import math
 import cv2
 import numpy as np
 
+debug = False
+
 def centerOfImage(img):
     return (img.shape[0]//2, img.shape[1]//2)
 
 # start at center of image, and move out half a triangle height
 # along the appropriate angle
-def centerOfTriangle(img, tri):
+def centerOfTriangle(img, tri, ctr):
     c = centerOfImage(img)
-    a = math.radians( 60*(tri+1) )
-    dx = math.cos(a)*h/2
-    dy = math.sin(a)*h/2
+    if (ctr == 'bot'):
+        a = math.radians( 60*(tri+1) )
+        dx = math.cos(a)*h/2
+        dy = math.sin(a)*h/2
+    else:
+        a = math.radians( 60*(tri+1)+30)
+        dx = math.cos(a)*side/2
+        dy = math.sin(a)*side/2
+        a -= math.radians(90)
+        dx += math.cos(a)*h/2
+        dy += math.sin(a)*h/2
+
     return (c[0]+dx, c[1]-dy)
+
+def whiteTriangle(updn, # is the point 'up' or 'dn'?
+                  row,  # 0 (top/front) or 1 (bot/rear)
+                  idx): # which triangle in the row
+    minc = side*idx//2;
+    maxc = minc+side
+    minr = int(h) if row else 0
+    maxr = int(minr + h)
+    basr = maxr if updn=='up' else minr
+    tipr = minr if updn=='up' else maxr
+    tri = np.array([[minc, basr], [maxc, basr], [(minc + maxc) // 2, tipr]])
+    cv2.fillConvexPoly(outimg, tri, (255,255,255,255))
 
 def copyTriangle(img, # openCV image
                  tri, # which triangle of the img, 0-5
                  ctr, # where does the center go, 'bot' or 'lr'
                  row, # 0 (top/front) or 1 (bot/rear)
                  idx): # which triangle in the row
-    crot = centerOfTriangle(img, tri)
+    #crot = centerOfTriangle(img, tri, ctr)
+    crot = centerOfImage(img)
+
+    if debug:
+        lilsqr=np.array([[int(crot[0]-10),int(crot[1]-10)], [int(crot[0]-10),int(crot[1]+10)], [int(crot[0]+10),int(crot[1]+10)], [int(crot[0]+10),int(crot[1]-10)]])
+        cv2.fillConvexPoly(img, lilsqr, (255,0,0))
+        cv2.imwrite('imgdot.png', img)
     src_cnr = -120 + 60*tri # where is the center-corner originally?
     if   ctr == 'bot':
         dst_cnr = -90
@@ -32,30 +61,36 @@ def copyTriangle(img, # openCV image
         dst_cnr = -30
     arot = dst_cnr - src_cnr
     R = cv2.getRotationMatrix2D(crot, arot, 1)
-    rot = cv2.warpAffine(img, R, (side*4, side*4))
-    cv2.imwrite('rot.png', rot)
-    minr = int(crot[1]-   h/2);  maxr = int(minr+h)
-    minc = int(crot[0]-side/2);  maxc = minc + side
-    crop = cv2.cvtColor(rot[minr:maxr, minc:maxc], cv2.COLOR_BGR2BGRA)
-    cv2.imwrite('crop.png', crop)
-    hh = crop.shape[0]
+    rot = cv2.warpAffine(img, R, (side*2, side*2))
+    if debug:
+        cv2.fillConvexPoly(rot, lilsqr, (255,0,0))
+        cv2.imwrite('rot.png', rot)
+
+    minr = int(crot[1] - h);    maxr = crot[1]
+    hh = int(h)
     if   ctr == 'bot':
+        minc = int(crot[0] - side/2); maxc = int(crot[0] + side/2)
         tril = np.array([[0,0], [side//2,hh], [0, hh]])
         trir = np.array([[side,0], [side,hh], [side//2, hh]])
     else:
+        minc = int(crot[0] - side);   maxc = crot[0]
         tril = np.array([[0,0], [side//2,0], [0, hh]])
         trir = np.array([[side,0], [side,hh], [side//2, 0]])
+    crop = cv2.cvtColor(rot[minr:maxr, minc:maxc], cv2.COLOR_BGR2BGRA)
+    if debug:
+        cv2.imwrite('crop.png', crop)
     cv2.fillConvexPoly(crop, tril, (0,0,0,0))
     cv2.fillConvexPoly(crop, trir, (0,0,0,0))
+    if debug:
+        cv2.imwrite('crop.png', crop)
 
-    cv2.imwrite('crop.png', crop)
-
-    minr = h if row else 0;  maxr = minr+crop.shape[0]
-    minc = index * side//2;  maxc = minc+crop.shape[1]
+    minr = hh if row else 0;  maxr = minr+crop.shape[0]
+    minc = index * side//2;   maxc = minc+crop.shape[1]
     roi = outimg[minr:maxr, minc:maxc]
     cnd = crop[:, :, 3] > 0
     roi[cnd] = crop[cnd]
-    cv2.imwrite('out.png', outimg)
+    if debug:
+        cv2.imwrite('out.png', outimg)
 
     stophere=1
 
@@ -78,21 +113,27 @@ h  = math.sqrt(side*side - side*side/4)
 nr = int(math.ceil(2*h))
 nc = int((half+1) * (side/2))
 outimg = np.zeros((nr, nc, 4))
-cv2.imwrite('out.png', outimg)
+#cv2.imwrite('out.png', outimg)
 
 
 
 for i in range(len(tri)):
-    index   = i % half
-    if re.match('GLUE', tri[i]):
+    index =     i %  half
+    row   = int(i >= half)
+    glue = re.match('GLUE\s+(up|dn)', tri[i])
+    if glue:
+        corner = glue.group(1)
+        whiteTriangle(corner, row, index)
         continue;
+    # else match face/triangle/corner
     ftc = re.match('(\d+)\.(\d)\s+(bot|lr|na)', tri[i])
     facei   = int(ftc.group(1))
     trii    = int(ftc.group(2))
     corner  =     ftc.group(3)
-    row     = int(i >= half)
+
     copyTriangle(image[facei], trii, corner, row, index)
 
+cv2.imwrite('out.png', outimg)
 
 
 
