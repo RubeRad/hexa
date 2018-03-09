@@ -30,9 +30,7 @@ def centerOfTriangle(img, tri, ctr):
 
     return (c[0]+dx, c[1]-dy)
 
-def whiteTriangle(updn, # is the point 'up' or 'dn'?
-                  row,  # 0 (top/front) or 1 (bot/rear)
-                  idx): # which triangle in the row
+def triangleVertices(updn, row, idx):
     minc = side*idx//2;
     maxc = minc+side
     minr = int(h) if row else 0
@@ -40,7 +38,20 @@ def whiteTriangle(updn, # is the point 'up' or 'dn'?
     basr = maxr if updn=='up' else minr
     tipr = minr if updn=='up' else maxr
     tri = np.array([[minc, basr], [maxc, basr], [(minc + maxc) // 2, tipr]])
+    return tri
+
+def drawBoundary(tri):
+    cv2.line(outimg, (tri[0][0],tri[0][1]), (tri[1][0],tri[1][1]), (0,0,0,255), 3)
+    cv2.line(outimg, (tri[1][0],tri[1][1]), (tri[2][0],tri[2][1]), (0,0,0,255), 3)
+    cv2.line(outimg, (tri[2][0],tri[2][1]), (tri[0][0],tri[0][1]), (0,0,0,255), 3)
+
+
+def whiteTriangle(updn, # is the point 'up' or 'dn'?
+                  row,  # 0 (top/front) or 1 (bot/rear)
+                  idx): # which triangle in the row
+    tri = triangleVertices(updn, row, idx)
     cv2.fillConvexPoly(outimg, tri, (255,255,255,255))
+    drawBoundary(tri)
 
 def copyTriangle(img, # openCV image
                  tri, # which triangle of the img, 0-5
@@ -92,6 +103,9 @@ def copyTriangle(img, # openCV image
     if debug:
         cv2.imwrite('out.png', outimg)
 
+    updn = 'up' if ctr=='lr' else 'dn'
+    tri = triangleVertices(updn, row, idx)
+    drawBoundary(tri)
     stophere=1
 
 image=[]
