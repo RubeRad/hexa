@@ -70,6 +70,8 @@ def copyTriangle(img, # openCV image
         dst_cnr = -90
     elif ctr == 'lr':
         dst_cnr = -30
+    elif ctr == 'ur':
+        dst_cnr = +30
     arot = dst_cnr - src_cnr
     R = cv2.getRotationMatrix2D(crot, arot, 1)
     rot = cv2.warpAffine(img, R, (side*2, side*2))
@@ -77,16 +79,34 @@ def copyTriangle(img, # openCV image
         cv2.fillConvexPoly(rot, lilsqr, (255,0,0))
         cv2.imwrite('rot.png', rot)
 
-    minr = int(crot[1] - h);    maxr = crot[1]
+
     hh = int(h)
-    if   ctr == 'bot':
-        minc = int(crot[0] - side/2); maxc = int(crot[0] + side/2)
+    # where do we copy the triangle from the rotated image?
+    if ctr == 'bot':
+        minc = int(crot[0] - side/2)
+        maxc = int(crot[0] + side/2)
+        minr = int(crot[1] - h)
+        maxr = int(crot[1])
+    elif ctr == 'lr':
+        minc = int(crot[0] - side)
+        maxc = int(crot[0])
+        minr = int(crot[1] - h)
+        maxr = int(crot[1])
+    elif ctr == 'ur':
+        minc = int(crot[0]-side)
+        maxc = int(crot[0])
+        minr = int(crot[1])
+        maxr = int(crot[1] + h)
+    #else: not implemented yet
+
+    # after cropping, where do we erase?
+    if   ctr == 'bot' or ctr == 'ur': # point dn, blanks ll, lr
         tril = np.array([[0,0], [side//2,hh], [0, hh]])
         trir = np.array([[side,0], [side,hh], [side//2, hh]])
-    else:
-        minc = int(crot[0] - side);   maxc = crot[0]
+    else:                             # point up, blanks ul, ur
         tril = np.array([[0,0], [side//2,0], [0, hh]])
         trir = np.array([[side,0], [side,hh], [side//2, 0]])
+
     crop = cv2.cvtColor(rot[minr:maxr, minc:maxc], cv2.COLOR_BGR2BGRA)
     if debug:
         cv2.imwrite('crop.png', crop)
@@ -111,10 +131,17 @@ def copyTriangle(img, # openCV image
 image=[]
 for i in range(len(sys.argv)):
     if i==0: continue
-    image.append( cv2.imread(sys.argv[i]) )
+    tmpimg = cv2.imread(sys.argv[i])
+    img = cv2.resize(tmpimg, (316,316))
+    image.append( img ) #cv2.imread(sys.argv[i]) )
     side = image[-1].shape[0] // 2 # TBD: diff, non-square
 
-patfile = open('tri.cfg', 'r')
+if (len(sys.argv) == 4):
+    patfile = open('tri.cfg', 'r')
+elif (len(sys.argv) == 7):
+    patfile = open('hex.cfg', 'r')
+# else ...
+
 lines = patfile.readlines()
 tri = []
 for line in lines:
@@ -132,6 +159,7 @@ outimg = np.zeros((nr, nc, 4))
 
 
 for i in range(len(tri)):
+    print(tri[i])
     index =     i %  half
     row   = int(i >= half)
     glue = re.match('GLUE\s+(up|dn)', tri[i])
@@ -140,7 +168,7 @@ for i in range(len(tri)):
         whiteTriangle(corner, row, index)
         continue;
     # else match face/triangle/corner
-    ftc = re.match('(\d+)\.(\d)\s+(bot|lr|na)', tri[i])
+    ftc = re.match('(\d+)\.(\d)\s+(bot|lr|ur|na)', tri[i])
     facei   = int(ftc.group(1))
     trii    = int(ftc.group(2))
     corner  =     ftc.group(3)
