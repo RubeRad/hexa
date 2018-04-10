@@ -153,7 +153,7 @@ parser.add_argument('images', type=str, nargs='+',
 parser.add_argument('--out', type=str,
                     help='Output filename', default='out.png')
 parser.add_argument('--cfg', type=str,
-                    help='Config filename', default='tri.png')
+                    help='Config filename', default='tri.cfg')
 args = parser.parse_args()
 
 image=[]
