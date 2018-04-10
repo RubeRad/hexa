@@ -154,14 +154,26 @@ parser.add_argument('--out', type=str,
                     help='Output filename', default='out.png')
 parser.add_argument('--cfg', type=str,
                     help='Config filename', default='tri.cfg')
+parser.add_argument('--pix', type=int,
+                    help='Input img resample size', default=1000)
 args = parser.parse_args()
+side = args.pix // 2 # each side of each triangle
 
 image=[]
 for fname in args.images:
     tmpimg = cv2.imread(fname)
-    #img = cv2.resize(tmpimg, (316,316))
-    image.append( tmpimg ) #cv2.imread(sys.argv[i]) )
-    side = image[-1].shape[0] // 2 # TBD: diff, non-square
+    dim0 = tmpimg.shape[0]
+    dim1 = tmpimg.shape[1]
+    # resize so smaller dimension is args.pix
+    ratio = args.pix / min(dim0,dim1)
+    sized = cv2.resize(tmpimg, (int(dim0*ratio),
+                                int(dim1*ratio)))
+    ctr = centerOfImage(sized)
+    cropped = sized[ctr[0]-side:ctr[0]+side,
+                    ctr[1]-side:ctr[1]+side]
+    image.append( cropped )
+# now all images are pixXpix = 2side X 2side
+
 
 patfile = open(args.cfg, 'r');
 nrows = 2 # default, unless overridden in cfg
