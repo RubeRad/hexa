@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# sudo apt-get install python-opencv  ?
+# sudo apt-get install python3-opencv
+
 import sys
 import os
 import re
