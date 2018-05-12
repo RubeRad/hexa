@@ -159,6 +159,8 @@ parser.add_argument('--cfg', type=str,
                     help='Config filename', default='tri.cfg')
 parser.add_argument('--pix', type=int,
                     help='Input img resample size', default=1000)
+parser.add_argument('--hexify', type=int, default=0,
+                    help='Output _hex.png to show hexification')
 args = parser.parse_args()
 side = args.pix // 2 # each side of each triangle
 
@@ -178,46 +180,65 @@ for fname in args.images:
 # now all images are pixXpix = 2side X 2side
 
 
-patfile = open(args.cfg, 'r');
-nrows = 2 # default, unless overridden in cfg
-lines = patfile.readlines()
-tri = []
-for line in lines:
-    line = re.sub("\#.*", '', line)
-    rows = re.match('ROWS\s+(\d+)', line)
-    if rows:
-        nrows = int(rows.group(1))
-    elif re.match('\S', line):
-        tri.append(line)
+if args.hexify: # use hardcoded cfg for each image
+    nloops=len(args.images)
+else: # read .cfg from file
+    nloops=1
+    patfile = open(args.cfg, 'r');
+    nrows = 2 # default, unless overridden in cfg
+    lines = patfile.readlines()
+    tri = []
+    for line in lines:
+        line = re.sub("\#.*", '', line)
+        rows = re.match('ROWS\s+(\d+)', line)
+        if rows:
+            nrows = int(rows.group(1))
+        elif re.match('\S', line):
+            tri.append(line)
 
-triwidth = len(tri)//nrows
-h  = math.sqrt(side*side - side*side/4)
-nr = int(math.ceil(nrows*h))
-nc = int((triwidth+1) * (side/2))
-outimg = np.zeros((nr, nc, 4))
-#cv2.imwrite('out.png', outimg)
+for loop in range(nloops):
+    if args.hexify: # set up tri for each face
+        print("hexifying", args.images[loop])
+        nrows = 2;
+        tri = [str(loop)+".1 lr",
+               str(loop)+".0 bot",
+               str(loop)+".5 ll",
+               str(loop)+".2 ur",
+               str(loop)+".3 top",
+               str(loop)+".4 ul"]
 
+    triwidth = len(tri)//nrows
+    h  = math.sqrt(side*side - side*side/4)
+    nr = int(math.ceil(nrows*h))
+    nc = int((triwidth+1) * (side/2))
+    outimg = np.zeros((nr, nc, 4))
+    #cv2.imwrite('out.png', outimg)
 
+    for i in range(len(tri)):
+        #print(tri[i])
+        index = i %  triwidth
+        row   = i // triwidth
+        glue = re.match('(GLUE|BLANK)\s+(up|dn)', tri[i])
+        if glue:
+            edges  = glue.group(1)
+            corner = glue.group(2)
+            whiteTriangle(corner, row, index, edges)
+            continue;
+        # else match face/triangle/corner
+        ftc = re.match('(\d+)\.(\d)\s+(bot|top|lr|ll|ul|ur|na)', tri[i])
+        facei   = int(ftc.group(1))
+        trii    = int(ftc.group(2))
+        corner  =     ftc.group(3)
 
-for i in range(len(tri)):
-    print(tri[i])
-    index = i %  triwidth
-    row   = i // triwidth
-    glue = re.match('(GLUE|BLANK)\s+(up|dn)', tri[i])
-    if glue:
-        edges  = glue.group(1)
-        corner = glue.group(2)
-        whiteTriangle(corner, row, index, edges)
-        continue;
-    # else match face/triangle/corner
-    ftc = re.match('(\d+)\.(\d)\s+(bot|top|lr|ll|ul|ur|na)', tri[i])
-    facei   = int(ftc.group(1))
-    trii    = int(ftc.group(2))
-    corner  =     ftc.group(3)
+        copyTriangle(image[facei], trii, corner, row, index)
 
-    copyTriangle(image[facei], trii, corner, row, index)
-
-cv2.imwrite(args.out, outimg)
+    if args.hexify:
+        innfname = args.images[loop]
+        bas = re.match('(.*)\....$', innfname) # assume 3-char extension
+        outfname = bas.group(1) + "_hex.png"
+        cv2.imwrite(outfname, outimg)
+    else:
+        cv2.imwrite(args.out, outimg)
 
 
 
