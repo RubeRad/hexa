@@ -159,7 +159,7 @@ parser.add_argument('--cfg', type=str,
                     help='Config filename', default='tri.cfg')
 parser.add_argument('--pix', type=int,
                     help='Input img resample size', default=1000)
-parser.add_argument('--hexify', type=int, default=0,
+parser.add_argument('--hexify', action='store_true',
                     help='Output _hex.png to show hexification')
 args = parser.parse_args()
 side = args.pix // 2 # each side of each triangle
@@ -171,8 +171,8 @@ for fname in args.images:
     dim1 = tmpimg.shape[1]
     # resize so smaller dimension is args.pix
     ratio = args.pix / min(dim0,dim1)
-    sized = cv2.resize(tmpimg, (int(dim0*ratio),
-                                int(dim1*ratio)))
+    sized = cv2.resize(tmpimg, (math.ceil(dim0*ratio),
+                                math.ceil(dim1*ratio)))
     ctr = centerOfImage(sized)
     cropped = sized[ctr[0]-side:ctr[0]+side,
                     ctr[1]-side:ctr[1]+side]
@@ -200,12 +200,12 @@ for loop in range(nloops):
     if args.hexify: # set up tri for each face
         print("hexifying", args.images[loop])
         nrows = 2;
-        tri = [str(loop)+".1 lr",
-               str(loop)+".0 bot",
-               str(loop)+".5 ll",
-               str(loop)+".2 ur",
-               str(loop)+".3 top",
-               str(loop)+".4 ul"]
+        tri = [str(loop)+".1 lr\n",
+               str(loop)+".0 bot\n",
+               str(loop)+".5 ll\n",
+               str(loop)+".2 ur\n",
+               str(loop)+".3 top\n",
+               str(loop)+".4 ul\n"]
 
     triwidth = len(tri)//nrows
     h  = math.sqrt(side*side - side*side/4)
@@ -215,7 +215,7 @@ for loop in range(nloops):
     #cv2.imwrite('out.png', outimg)
 
     for i in range(len(tri)):
-        #print(tri[i])
+        print(tri[i], end='')
         index = i %  triwidth
         row   = i // triwidth
         glue = re.match('(GLUE|BLANK)\s+(up|dn)', tri[i])
