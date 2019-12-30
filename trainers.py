@@ -37,6 +37,13 @@ def draw_hexagon(base_color, spot1, spot2):
 
     return img
 
+parser = argparse.ArgumentParser("Make a printable hexaflexagon template")
+parser.add_argument('-q', '--quiet', action='store_true',
+                    help="Don't open new images in windows")
+args = parser.parse_args()
+show = not args.quiet
+
+
 red = (0,0,255)
 ylw = (0,255,255)
 blu = (255,0,0)
@@ -44,33 +51,39 @@ org = (0,165,255)
 grn = (0,255,0)
 ppl = (255,0,255)
 img = draw_hexagon(red, ylw, ppl)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("0red.png", img)
 
 img = draw_hexagon(ylw, org, blu)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("1ylw.png", img)
 
 img = draw_hexagon(blu, red, grn)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("2blu.png", img)
 
 img = draw_hexagon(ppl, blu, ppl)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("3ppl.png", img)
 
 img = draw_hexagon(org, org, red)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("4org.png", img)
 
 img = draw_hexagon(grn, ylw, grn)
-cv2.imshow("image", img)
-cv2.waitKey(0)
+if show:
+    cv2.imshow("image", img)
+    cv2.waitKey(0)
 cv2.imwrite("5grn.png", img)
 
 
