@@ -46,6 +46,8 @@ args = parser.parse_args()
 
 # this is the original image
 fname = args.images[0]
+path = os.path.abspath(fname)
+dir,file = os.path.split(path)
 oimg = cv2.imread(fname)
 orows = oimg.shape[0] # here rows/h before
 ocols = oimg.shape[1] #      cols/w
@@ -87,7 +89,8 @@ while True:
         I = np.float32([[1,0,halfpix-oldcol],[0,1,halfpix-oldrow]])
         crop   = cv2.warpAffine(oimg, I, (halfpix*2, halfpix*2))
         outimg = cv2.resize(crop, (args.pix,args.pix))
-        outfname = "crop_"+fname
+        outfname = os.path.join(dir, "crop_"+file)
         cv2.imwrite(outfname, outimg)
+        print('Wrote '+outfname)
         break
 
